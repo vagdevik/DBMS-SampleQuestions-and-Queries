@@ -1,0 +1,151 @@
+Create table and load a file:
+
+1.create table person(name varchar(20),age int,gender varchar(20),primary key(name));
+
+2.load data local infile '/home/vubuntu/person.txt' into table person fields terminated by ',' lines terminated by '\n';
+
+3.select * from person;
+
+----to delete the table person: drop table person;
+
+-------------------------------------------------------assignment 1-----------------------------------------------------------------
+
+a.  
+Find all pizzerias frequented by at least one person under the age of 18.
+
+ans:   select distinct frequents.pizzeria from frequents,person where (person.age<18) and (person.name=frequents.name);
++-------------------+
+| pizzeria          |
++-------------------+
+|  'Pizza Hut'      |
+|  'New York Pizza' |
+|  'Straw Hat'      |
++-------------------+
+
+
+
+b.  
+Find the names of all females who eat either mushroom or pepperoni pizza (or both).
+
+ans:  select distinct person.name from person,eats where (person.gender=" 'female' ") and (person.name=eats.name) and (eats.pizza= " 'mushroom' " or eats.pizza= " 'pepperoni' ");
+
++-------+
+| name  |
++-------+
+| 'Amy' |
+| 'Fay' |
++-------+
+
+
+
+c.  
+Find the names of all females who eat both mushroom and pepperoni pizza.
+
+sol: select person.name from person join eats on eats.name=person.name where (person.gender=" 'female' ") and (eats.pizza=" 'mushroom' " or eats.pizza= " 'pepperoni' ") group by person.name having count(distinct eats.pizza)=2;
++-------+
+| name  |
++-------+
+| 'Amy' |
++-------+
+
+
+d.  
+Find all pizzerias that serve at least one pizza that Amy eats for less than $10.00.
+
+sol: select distinct serves.pizzeria from serves join eats on serves.pizza=eats.pizza where (eats.name="'Amy'") and (serves.price<=10);
++------------------+
+| pizzeria         |
++------------------+
+| 'Little Caesars' |
+| 'New York Pizza' |
+| 'Straw Hat'      |
++------------------+
+
+
+
+e.  
+Find all pizzerias that are frequented by only females or only males.
+
+sol: mysql> select frequents.pizzeria FROM frequents INNER JOIN person ON person.name=frequents.name WHERE person.gender='male' and frequents.pizzeria NOT IN (SELECT frequents.pizzeria from frequents INNER JOIN person ON person.name=frequents.name WHERE person.gender='female')
+    -> UNION 
+    -> select frequents.pizzeria FROM frequents INNER JOIN person ON person.name=frequents.name WHERE person.gender='female' and frequents.pizzeria NOT IN (SELECT frequents.pizzeria from frequents INNER JOIN person ON person.name=frequents.name WHERE person.gender='male');
++----------------+
+| pizzeria       |
++----------------+
+| Chicago Pizza  |
+| New York Pizza |
+| Little Caesars |
++----------------+
+3 rows in set (0.00 sec)
+
+
+
+
+f.  
+For each person, find all pizzas the person eats that are not served by any pizzeria the person frequents. Return all such person (name) / pizza pairs.
+
+sol: mysql> SELECT eats.name,eats.pizza FROM eats 
+WHERE ROW(eats.name,eats.pizza)NOT IN(
+SELECT DISTINCT eats.name,eats.pizza FROM eats,serves,frequents WHERE
+ eats.name=frequents.name AND eats.pizza=serves.pizza AND frequents.pizzeria=serves.pizzeria
+);
+
++------+----------+
+| name | pizza    |
++------+----------+
+| Amy  | mushroom |
+| Dan  | mushroom |
+| Gus  | mushroom |
++------+----------+
+3 rows in set (0.01 sec)
+
+
+
+g.  
+Find the names of all people who frequent only pizzerias serving at least one pizza they eat.
+
+sol: mysql> SELECT person.name from person 
+    -> WHERE NOT EXISTS (SELECT frequents.name from frequents 
+    -> WHERE NOT EXISTS (SELECT eats.name from eats INNER JOIN serves ON (eats.pizza=serves.pizza) WHERE (serves.pizzeria=frequents.pizzeria) and eats.name=frequents.name) and frequents.name=person.name);
++------+
+| name |
++------+
+| Amy  |
+| Ben  |
+| Dan  |
+| Eli  |
+| Fay  |
+| Gus  |
+| Hil  |
++------+
+7 rows in set (0.00 sec)
+
+
+
+h.  
+Find the names of all people who frequent every pizzeria serving at least one pizza they eat.
+
+sol: mysql> SELECT person.name from person WHERE NOT EXISTS (SELECT DISTINCT eats.name from eats INNER JOIN serves ON (eats.pizza=serves.pizza) WHERE NOT EXISTS (SELECT frequents.name from frequents WHERE frequents.name=eats.name and frequents.pizzeria=serves.pizzeria) and person.name=eats.name);
++------+
+| name |
++------+
+| Fay  |
++------+
+1 row in set (0.02 sec)
+
+
+
+
+
+i.  
+Find the pizzeria serving the cheapest pepperoni pizza. In the case of ties, return all of the cheapest-pepperoni pizzerias.
+
+sol: select distinct serves.pizzeria from serves where price=(select min(serves.price) from serves where serves.pizza=" 'pepperoni' ") and pizza=" 'pepperoni' ";
++------------------+
+| pizzeria         |
++------------------+
+| 'New York Pizza' |
+| 'Straw Hat'      |
++------------------+
+
+
